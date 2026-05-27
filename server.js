@@ -150,12 +150,18 @@ app.get('/api/friends', async (req, res) => {
 
 // --- Socket.io リアルタイム通信ロジック ---
 io.on('connection', (socket) => {
-    socket.on('join_channel', async (channelName) => {
-        socket.join(channelName);
+    socket.on('join_channel', async (data) => {
+        const { myId, friendId } = data;
+        if (!myId || !friendId) return;
+
+        // 2人のユーザーIDを並び替えて共通のルームIDを決定
+        const roomId = [myId, friendId].sort().join('_');
+        socket.join(roomId);
+
         try {
             const result = await db.execute({
                 sql: "SELECT * FROM messages WHERE channel = ? ORDER BY id ASC LIMIT 100",
-                args: [channelName]
+                args: [roomId]
             });
             socket.emit('load_history', result.rows);
         } catch (err) {
@@ -164,13 +170,26 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_message', async (msgData) => {
-        const { channel, name, avatar, color, text, timestamp } = msgData;
+        const { myId, friendId, name, avatar, color, text, timestamp } = msgData;
+        if (!myId || !friendId) return;
+
+        // 保存用・通信用に共通のルームIDを決定
+        const roomId = [myId, friendId].sort().join('_');
+
         try {
             await db.execute({
                 sql: "INSERT INTO messages (channel, name, avatar, color, text, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-                args: [channel, name, avatar, color, text, timestamp]
+                args: [roomId, name, avatar, color, text, timestamp]
             });
-            io.to(channel).emit('receive_message', msgData);
+
+            io.to(roomId).emit('receive_message', {
+                channel: roomId,
+                name: name,
+                avatar: avatar,
+                color: color,
+                text: text,
+                timestamp: timestamp
+            });
         } catch (err) {
             console.error("データ保存失敗:", err);
         }
