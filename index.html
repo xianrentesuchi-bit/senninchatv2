@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SenninChat - メイン</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-main: #ffffff;
+            --bg-sidebar: #f0f4f9;
+            --bg-hover: #e1e5ea;
+            --bg-active: #d3e3fd;
+            --text-main: #1f1f1f;
+            --text-sub: #5e5e5e;
+            --brand-color: #0b57d0;
+            --border-color: #c7c7c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Open Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- 左側サイドバー --- */
+        .sidebar {
+            width: 256px;
+            background-color: var(--bg-sidebar);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(0,0,0,0.05);
+            padding: 8px;
+            flex-shrink: 0;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--text-main);
+            gap: 8px;
+        }
+
+        .user-info-box {
+            background-color: #ffffff;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #e0e0e0;
+            font-size: 0.8rem;
+        }
+        
+        .user-id-display {
+            color: var(--brand-color);
+            cursor: pointer;
+            text-decoration: underline;
+            word-break: break-all;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .friend-add-box {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+
+        .friend-add-box input {
+            flex: 1;
+            padding: 6px 10px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            outline: none;
+        }
+
+        .friend-add-box button {
+            background-color: var(--brand-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .menu-section {
+            margin-bottom: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            text-transform: uppercase;
+        }
+
+        .chat-list {
+            list-style: none;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #444746;
+            margin-bottom: 2px;
+        }
+
+        .chat-item:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .chat-item.active {
+            background-color: var(--bg-active);
+            color: #041e49;
+            font-weight: 600;
+        }
+
+        .avatar {
+            width: 24px;
+            height: 24px;
+            background-color: #a8c7fa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #041e49;
+            flex-shrink: 0;
+        }
+
+        /* --- 中央メインエリア --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-main);
+        }
+
+        .main-header {
+            height: 64px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #1f8737;
+            border-radius: 50%;
+        }
+
+        .message-area {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-color: #f8f9fa;
+        }
+
+        .message-group {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            max-width: 85%;
+        }
+
+        .message-group.received {
+            align-self: flex-start;
+        }
+
+        .message-group.sent {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .msg-avatar {
+            width: 36px;
+            height: 36px;
+            background-color: #74c0fc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .msg-body {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: auto;
+        }
+
+        .message-group.sent .msg-body {
+            align-items: flex-end;
+        }
+
+        .msg-header {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .message-group.sent .msg-header {
+            flex-direction: row-reverse;
+        }
+
+        .msg-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        .msg-time {
+            font-size: 0.7rem;
+            color: var(--text-sub);
+        }
+
+        .msg-text {
+            font-size: 0.95rem;
+            line-height: 1.45;
+            padding: 10px 14px;
+            border-radius: 18px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .message-group.received .msg-text {
+            background-color: #ffffff;
+            color: #1f1f1f;
+            border-top-left-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .message-group.sent .msg-text {
+            background-color: var(--brand-color);
+            color: #ffffff;
+            border-top-right-radius: 4px;
+        }
+
+        .msg-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .reaction-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background-color: #f1f3f4;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+
+        .reaction-badge:hover {
+            border-color: var(--border-color);
+            background-color: #e8eaed;
+        }
+
+        .input-container {
+            padding: 0 24px 24px 24px;
+            background-color: #f8f9fa;
+        }
+
+        .input-box {
+            border: 1px solid var(--border-color);
+            border-radius: 28px;
+            background-color: #fff;
+            padding: 8px 16px;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.15s, border-color 0.15s;
+        }
+
+        .input-box:focus-within {
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+            border-color: transparent;
+        }
+
+        .input-box textarea {
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 0.95rem;
+            padding: 8px 4px;
+            min-height: 40px;
+            max-height: 200px;
+        }
+
+        .input-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid #f1f3f4;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 8px;
+            color: var(--text-sub);
+        }
+
+        .toolbar-left i {
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            font-size: 20px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .toolbar-left i:hover {
+            background-color: #f1f3f4;
+            color: var(--text-main);
+        }
+
+        .btn-send {
+            background: none;
+            border: none;
+            color: var(--brand-color);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-send:hover {
+            background-color: rgba(11, 87, 208, 0.08);
+        }
+
+        .btn-send:disabled {
+            color: var(--border-color);
+            cursor: default;
+            background: none;
+        }
+
+        .toast {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #323232;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast" class="toast">アクションが実行されました</div>
+
+    <div class="sidebar">
+        <div class="logo-area">
+            <i class="material-icons-outlined" style="color:#0b57d0">chat</i>
+            <span>SenninChat</span>
+        </div>
+
+        <div class="user-info-box">
+            <div>ログインユーザー: <strong id="myUsername">...</strong></div>
+            <div>あなたの固有ID (クリックでコピー):</div>
+            <span class="user-id-display" id="myUserId" onclick="copyMyId()">...</span>
+        </div>
+
+        <div class="friend-add-box">
+            <input type="text" id="friendIdInput" placeholder="友達の固有IDを入力">
+            <button onclick="addFriend()">追加</button>
+        </div>
+
+        <div class="menu-section">
+            <div class="section-title">
+                <span>直近のチャット・フレンド</span>
+            </div>
+            <ul class="chat-list" id="chatList">
+                </ul>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="main-header">
+            <div class="header-left">
+                <span class="header-title" id="currentChatName">チャットを選択してください</span>
+                <div class="status-dot" id="statusDot" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="message-area" id="messageArea">
+            <div style="text-align:center; padding-top:40px; color:var(--text-sub);">
+                左側のリストからフレンドを選択してチャットを開始してください。
+            </div>
+        </div>
+
+        <div class="input-container">
+            <form id="chatForm">
+                <div class="input-box">
+                    <textarea id="chatInput" placeholder="メッセージを入力" rows="1" disabled></textarea>
+                    <div class="input-toolbar">
+                        <div class="toolbar-left">
+                            <i class="material-icons-outlined" id="toolEmoji" title="絵文字を追加">sentiment_satisfied</i>
+                        </div>
+                        <button type="submit" class="btn-send" id="sendBtn" disabled>
+                            <i class="material-icons-outlined">send</i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // 認証チェック
+        const sessionUser = sessionStorage.getItem('chat_user');
+        if (!sessionUser) {
+            window.location.href = '/account.html';
+        }
+        const currentUser = JSON.parse(sessionUser);
+
+        document.getElementById('myUsername').textContent = currentUser.username;
+        document.getElementById('myUserId').textContent = currentUser.userId;
+
+        const socket = io();
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatForm = document.getElementById('chatForm');
+        const messageArea = document.getElementById('messageArea');
+        const chatList = document.getElementById('chatList');
+        const toast = document.getElementById('toast');
+        const statusDot = document.getElementById('statusDot');
+
+        let currentChannelName = '';
+        let currentChannelColor = '#74c0fc';
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 2500);
+        }
+
+        function copyMyId() {
+            navigator.clipboard.writeText(currentUser.userId);
+            showToast("固有IDをクリップボードにコピーしました");
+        }
+
+        // フレンド一覧読み込み
+        async function loadFriends() {
+            try {
+                const res = await fetch(`/api/friends?userId=${currentUser.userId}`);
+                const data = await res.json();
+                if (data.success) {
+                    chatList.innerHTML = '';
+                    if(data.friends.length === 0) {
+                        chatList.innerHTML = '<li style="font-size:0.8rem; padding:8px; color:var(--text-sub);">フレンドがいません</li>';
+                    }
+                    data.friends.forEach((f, idx) => {
+                        const initial = f.username.charAt(0).toUpperCase();
+                        const colors = ['#74c0fc', '#e2c5ff', '#fcdebc', '#b2f2bb', '#ffc9c9'];
+                        const color = colors[idx % colors.length];
+
+                        const li = document.createElement('li');
+                        li.classList.add('chat-item');
+                        if (currentChannelName === f.username) li.classList.add('active');
+                        li.onclick = function() { switchChannel(this, f.username, initial, color); };
+                        li.innerHTML = `
+                            <div class="avatar" style="background-color: ${color};">${initial}</div>
+                            <span>${f.username}</span>
+                        `;
+                        chatList.appendChild(li);
+                    });
+                }
+            } catch (err) {
+                console.error("フレンドリスト取得失敗", err);
+            }
+        }
+
+        // フレンド追加
+        async function addFriend() {
+            const friendIdInput = document.getElementById('friendIdInput');
+            const friendId = friendIdInput.value.trim();
+            if(!friendId) return;
+
+            try {
+                const res = await fetch('/api/friends/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.userId, friendId: friendId })
+                });
+                const data = await res.json();
+                showToast(data.message);
+                if(data.success) {
+                    friendIdInput.value = '';
+                    loadFriends();
+                }
+            } catch(err) {
+                showToast("通信エラーが発生しました");
+            }
+        }
+
+        chatInput.addEventListener('input', () => {
+            sendBtn.disabled = chatInput.value.trim() === '';
+            chatInput.style.height = 'auto';
+            chatInput.style.height = chatInput.scrollHeight + 'px';
+        });
+
+        function appendMessageElement(data) {
+            const msgGroup = document.createElement('div');
+            msgGroup.classList.add('message-group');
+            
+            if (data.name === currentUser.username) {
+                msgGroup.classList.add('sent');
+                msgGroup.innerHTML = `
+                    <div class="msg-avatar" style="background-color: var(--brand-color);">自分</div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="msg-name">あなた</span>
+                            <span class="msg-time">${data.timestamp}</span>
+                        </div>
+                        <div class="msg-text">${escapeHTML(data.text)}</div>
+                        <div class="msg-actions">
+                            <div class="reaction-badge" onclick="toggleReaction(this)">👏 <span>0</span></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                msgGroup.classList.add('received');
+                msgGroup.innerHTML = `
+                    <div class="msg-avatar" style="background-color: ${data.color};">${data.avatar}</div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="msg-name">${data.name}</span>
+                            <span class="msg-time">${data.timestamp}</span>
+                        </div>
+                        <div class="msg-text">${escapeHTML(data.text)}</div>
+                        <div class="msg-actions">
+                            <div class="reaction-badge" onclick="toggleReaction(this)">👍 <span>0</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            messageArea.appendChild(msgGroup);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+
+        socket.on('load_history', (rows) => {
+            messageArea.innerHTML = '';
+            if (rows.length === 0) {
+                const initialAvatar = currentChannelName.charAt(0).toUpperCase();
+                messageArea.innerHTML = `
+                    <div class="message-group received">
+                        <div class="msg-avatar" style="background-color: ${currentChannelColor};">${initialAvatar}</div>
+                        <div class="msg-body">
+                            <div class="msg-header">
+                                <span class="msg-name">${currentChannelName}</span>
+                                <span class="msg-time">新しいスレッド</span>
+                            </div>
+                            <div class="msg-text">これは ${currentChannelName} とのトークスペースの最上部です。</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                rows.forEach(row => {
+                    appendMessageElement(row);
+                });
+            }
+        });
+
+        socket.on('receive_message', (msgData) => {
+            if (msgData.channel === currentChannelName) {
+                appendMessageElement(msgData);
+            }
+        });
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = chatInput.value.trim();
+            if(!text || !currentChannelName) return;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+            const msgData = {
+                channel: currentChannelName,
+                name: currentUser.username,
+                avatar: currentUser.username.charAt(0).toUpperCase(),
+                color: '#0b57d0',
+                text: text,
+                timestamp: timeStr
+            };
+
+            socket.emit('send_message', msgData);
+
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            sendBtn.disabled = true;
+        });
+
+        function switchChannel(element, name, avatarChar, color) {
+            currentChannelName = name;
+            currentChannelColor = color || '#74c0fc';
+            
+            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+
+            document.getElementById('currentChatName').textContent = name;
+            chatInput.placeholder = `${name} へのメッセージ`;
+            chatInput.disabled = false;
+            statusDot.style.display = 'block';
+            
+            socket.emit('join_channel', currentChannelName);
+        }
+
+        function toggleReaction(element) {
+            const countSpan = element.querySelector('span');
+            let count = parseInt(countSpan.textContent);
+            countSpan.textContent = count + 1;
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        document.getElementById('toolEmoji').addEventListener('click', () => {
+            if(chatInput.disabled) return;
+            const emojis = ['😊', '👍', '🎉', '🚀', '✨'];
+            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+            chatInput.value += randomEmoji;
+            chatInput.dispatchEvent(new Event('input'));
+            chatInput.focus();
+        });
+
+        // 初回ロード実行
+        loadFriends();
+    </script>
+</body>
+</html>
