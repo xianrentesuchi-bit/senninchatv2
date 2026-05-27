@@ -495,6 +495,8 @@
 
         let currentChannelName = '';
         let currentChannelColor = '#74c0fc';
+        let currentFriendId = '';
+        let currentRoomId = '';
 
         function showToast(message) {
             toast.textContent = message;
@@ -525,7 +527,7 @@
                         const li = document.createElement('li');
                         li.classList.add('chat-item');
                         if (currentChannelName === f.username) li.classList.add('active');
-                        li.onclick = function() { switchChannel(this, f.username, initial, color); };
+                        li.onclick = function() { switchChannel(this, f.username, initial, color, f.user_id); };
                         li.innerHTML = `
                             <div class="avatar" style="background-color: ${color};">${initial}</div>
                             <span>${f.username}</span>
@@ -631,7 +633,7 @@
         });
 
         socket.on('receive_message', (msgData) => {
-            if (msgData.channel === currentChannelName) {
+            if (msgData.channel === currentRoomId) {
                 appendMessageElement(msgData);
             }
         });
@@ -639,13 +641,15 @@
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const text = chatInput.value.trim();
-            if(!text || !currentChannelName) return;
+            if(!text || !currentChannelName || !currentFriendId) return;
 
             const now = new Date();
             const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 
             const msgData = {
-                channel: currentChannelName,
+                channel: currentRoomId,
+                myId: currentUser.userId,
+                friendId: currentFriendId,
                 name: currentUser.username,
                 avatar: currentUser.username.charAt(0).toUpperCase(),
                 color: '#0b57d0',
@@ -660,9 +664,11 @@
             sendBtn.disabled = true;
         });
 
-        function switchChannel(element, name, avatarChar, color) {
+        function switchChannel(element, name, avatarChar, color, friendId) {
             currentChannelName = name;
+            currentFriendId = friendId;
             currentChannelColor = color || '#74c0fc';
+            currentRoomId = [currentUser.userId, friendId].sort().join('_');
             
             document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
             element.classList.add('active');
@@ -672,7 +678,10 @@
             chatInput.disabled = false;
             statusDot.style.display = 'block';
             
-            socket.emit('join_channel', currentChannelName);
+            socket.emit('join_channel', {
+                myId: currentUser.userId,
+                friendId: currentFriendId
+            });
         }
 
         function toggleReaction(element) {
