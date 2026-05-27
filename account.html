@@ -116,6 +116,11 @@
             background-color: #0845a3;
         }
 
+        .btn-auth:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+        }
+
         .error-msg {
             color: #d93025;
             font-size: 0.85rem;
@@ -179,6 +184,7 @@
         let mode = 'login';
         const errorMsg = document.getElementById('errorMsg');
         const toast = document.getElementById('toast');
+        const btnSubmit = document.getElementById('btnSubmit');
 
         function showToast(message) {
             toast.textContent = message;
@@ -191,12 +197,16 @@
             errorMsg.style.display = 'none';
             document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
             document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
-            document.getElementById('btnSubmit').textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
+            btnSubmit.textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
         }
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMsg.style.display = 'none';
+
+            // ボタンを「認証中...」にして無効化
+            btnSubmit.textContent = '認証中...';
+            btnSubmit.disabled = true;
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -225,10 +235,16 @@
                 } else {
                     errorMsg.textContent = result.message;
                     errorMsg.style.display = 'block';
+                    // エラー時はボタンを元に戻す
+                    btnSubmit.textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
+                    btnSubmit.disabled = false;
                 }
             } catch (err) {
                 errorMsg.textContent = 'サーバーとの通信に失敗しました。';
                 errorMsg.style.display = 'block';
+                // エラー時はボタンを元に戻す
+                btnSubmit.textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
+                btnSubmit.disabled = false;
             }
         });
     </script>
