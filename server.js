@@ -96,7 +96,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// 3. フレンド追加処理 (userId を使用)
+// 3. フレンド追加処理 (userId を使用 - お互いに登録されるように修正)
 app.post('/api/friends/add', async (req, res) => {
     const { userId, friendId } = req.body;
     if (!userId || !friendId) {
@@ -115,12 +115,19 @@ app.post('/api/friends/add', async (req, res) => {
             return res.json({ success: false, message: "該当する固有IDのユーザーがチャットシステムに見つかりません。" });
         }
 
-        // フレンド関係をTursoに保存
+        // 自分から相手へのフレンド関係を保存
         await db.execute({
             sql: "INSERT OR IGNORE INTO friends (user_id, friend_id) VALUES (?, ?)",
             args: [userId, friendId]
         });
-        res.json({ success: true, message: `フレンド「${userCheck.rows[0].username}」を追加しました。` });
+
+        // 相手から自分へのフレンド関係も同時に保存（お互いにフレンド化）
+        await db.execute({
+            sql: "INSERT OR IGNORE INTO friends (user_id, friend_id) VALUES (?, ?)",
+            args: [friendId, userId]
+        });
+
+        res.json({ success: true, message: `フレンド「${userCheck.rows[0].username}」とお互いにフレンドになりました。` });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
