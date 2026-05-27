@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SenninChat - アカウントシステム</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #ffffff;
+            --bg-sidebar: #f0f4f9;
+            --bg-hover: #e1e5ea;
+            --bg-active: #d3e3fd;
+            --text-main: #1f1f1f;
+            --text-sub: #5e5e5e;
+            --brand-color: #0b57d0;
+            --border-color: #c7c7c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Open Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: var(--bg-sidebar);
+            color: var(--text-main);
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--bg-main);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+            color: var(--brand-color);
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--bg-sidebar);
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        .auth-tab.active {
+            color: var(--brand-color);
+            border-bottom: 2px solid var(--brand-color);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--brand-color);
+        }
+
+        .btn-auth {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--brand-color);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .btn-auth:hover {
+            background-color: #0845a3;
+        }
+
+        .error-msg {
+            color: #d93025;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        /* 通知用トースト */
+        .toast {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #323232;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast" class="toast">処理が完了しました</div>
+
+    <div class="auth-container">
+        <div class="auth-logo">
+            <i class="material-icons-outlined">chat</i>
+            <span>SenninChat</span>
+        </div>
+
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">ログイン</div>
+            <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">新規登録</div>
+        </div>
+
+        <form id="authForm">
+            <div class="form-group">
+                <label for="username">ユーザー名</label>
+                <input type="text" id="username" required placeholder="ユーザー名を入力">
+            </div>
+            <div class="form-group">
+                <label for="password">パスワード</label>
+                <input type="password" id="password" required placeholder="パスワードを入力">
+            </div>
+            <button type="submit" class="btn-auth" id="btnSubmit">ログイン</button>
+            <div class="error-msg" id="errorMsg"></div>
+        </form>
+    </div>
+
+    <script>
+        let mode = 'login';
+        const errorMsg = document.getElementById('errorMsg');
+        const toast = document.getElementById('toast');
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 2500);
+        }
+
+        function switchTab(targetMode) {
+            mode = targetMode;
+            errorMsg.style.display = 'none';
+            document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+            document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+            document.getElementById('btnSubmit').textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
+        }
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.style.display = 'none';
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const endpoint = mode === 'login' ? '/api/login' : '/api/register';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(mode === 'login' ? 'ログイン成功！' : 'アカウントが作成されました！');
+                    
+                    // セッションストレージにログイン情報を記憶してメインチャットへ遷移
+                    sessionStorage.setItem('chat_user', JSON.stringify({
+                        userId: result.userId,
+                        username: result.username
+                    }));
+                    
+                    setTimeout(() => {
+                        window.location.href = '/index.html';
+                    }, 1000);
+                } else {
+                    errorMsg.textContent = result.message;
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'サーバーとの通信に失敗しました。';
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
