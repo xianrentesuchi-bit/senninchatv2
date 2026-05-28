@@ -129,7 +129,6 @@
             display: none;
         }
 
-        /* 通知用トースト */
         .toast {
             position: absolute;
             bottom: 40px;
@@ -149,6 +148,15 @@
         .toast.show {
             opacity: 1;
         }
+
+        .loading-display {
+            display: none;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-sub);
+            padding: 40px 0;
+        }
     </style>
 </head>
 <body>
@@ -161,30 +169,44 @@
             <span>SenninChat</span>
         </div>
 
-        <div class="auth-tabs">
-            <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">ログイン</div>
-            <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">新規登録</div>
+        <div id="authContent">
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">ログイン</div>
+                <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">新規登録</div>
+            </div>
+
+            <form id="authForm">
+                <div class="form-group">
+                    <label for="username">ユーザー名</label>
+                    <input type="text" id="username" required placeholder="ユーザー名を入力">
+                </div>
+                <div class="form-group">
+                    <label for="password">パスワード</label>
+                    <input type="password" id="password" required placeholder="パスワードを入力">
+                </div>
+                <button type="submit" class="btn-auth" id="btnSubmit">ログイン</button>
+                <div class="error-msg" id="errorMsg"></div>
+            </form>
         </div>
 
-        <form id="authForm">
-            <div class="form-group">
-                <label for="username">ユーザー名</label>
-                <input type="text" id="username" required placeholder="ユーザー名を入力">
-            </div>
-            <div class="form-group">
-                <label for="password">パスワード</label>
-                <input type="password" id="password" required placeholder="パスワードを入力">
-            </div>
-            <button type="submit" class="btn-auth" id="btnSubmit">ログイン</button>
-            <div class="error-msg" id="errorMsg"></div>
-        </form>
+        <div id="loadingDisplay" class="loading-display">
+            認証中...
+        </div>
     </div>
 
     <script>
+        const localUser = localStorage.getItem('chat_user');
+        if (localUser) {
+            sessionStorage.setItem('chat_user', localUser);
+            window.location.href = '/index.html';
+        }
+
         let mode = 'login';
         const errorMsg = document.getElementById('errorMsg');
         const toast = document.getElementById('toast');
         const btnSubmit = document.getElementById('btnSubmit');
+        const authContent = document.getElementById('authContent');
+        const loadingDisplay = document.getElementById('loadingDisplay');
 
         function showToast(message) {
             toast.textContent = message;
@@ -204,9 +226,8 @@
             e.preventDefault();
             errorMsg.style.display = 'none';
 
-            // ボタンを「認証中...」にして無効化
-            btnSubmit.textContent = '認証中...';
-            btnSubmit.disabled = true;
+            authContent.style.display = 'none';
+            loadingDisplay.style.display = 'block';
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -223,7 +244,10 @@
                 if (result.success) {
                     showToast(mode === 'login' ? 'ログイン成功！' : 'アカウントが作成されました！');
                     
-                    // セッションストレージにログイン情報を記憶してメインチャットへ遷移
+                    localStorage.setItem('chat_user', JSON.stringify({
+                        userId: result.userId,
+                        username: result.username
+                    }));
                     sessionStorage.setItem('chat_user', JSON.stringify({
                         userId: result.userId,
                         username: result.username
@@ -235,14 +259,16 @@
                 } else {
                     errorMsg.textContent = result.message;
                     errorMsg.style.display = 'block';
-                    // エラー時はボタンを元に戻す
+                    loadingDisplay.style.display = 'none';
+                    authContent.style.display = 'block';
                     btnSubmit.textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
                     btnSubmit.disabled = false;
                 }
             } catch (err) {
                 errorMsg.textContent = 'サーバーとの通信に失敗しました。';
                 errorMsg.style.display = 'block';
-                // エラー時はボタンを元に戻す
+                loadingDisplay.style.display = 'none';
+                authContent.style.display = 'block';
                 btnSubmit.textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
                 btnSubmit.disabled = false;
             }
