@@ -11,14 +11,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// --- 各種設定（環境に合わせて書き換えてください） ---
 const GAS_WEBAPP_URL = process.env.GAS_WEBAPP_URL || "https://script.google.com/macros/s/AKfycbwYsl3issVM1SgFyeuRVCITmIfex6kc7lmuiRXVpxbD195ctM0aAsyUxBV_NZxVz9UH/exec";
 const db = createClient({
     url: process.env.TURSO_DATABASE_URL || "libsql://senninchat-senninch.aws-ap-northeast-1.turso.io",
     authToken: process.env.TURSO_AUTH_TOKEN || "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3Nzk4ODU4MzIsImlkIjoiMDE5ZTY5NTgtZTcwMS03NzhmLWFkYjAtMGQzMzM5ZDdlMDBlIiwicmlkIjoiZGU3ZTdlNTktYjZmMi00YWQ4LWIwNDMtYzkyMmY4ZDE2NGVkIn0.ER5t8rLt3YMoOWBv03igSfFH_z_O7JkdxedTLOOxv6HZ0SqiUa2Ef_Kre1qN0paLbTUkEpqlxlA5UrSSDvJkCA"
 });
 
-// データベースの初期化
 async function initDB() {
     await db.execute(`
         CREATE TABLE IF NOT EXISTS users (
@@ -35,6 +33,20 @@ async function initDB() {
         )
     `);
     await db.execute(`
+        CREATE TABLE IF NOT EXISTS groups (
+            group_id TEXT PRIMARY KEY,
+            group_name TEXT NOT NULL
+        )
+    `);
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS group_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            UNIQUE(group_id, user_id)
+        )
+    `);
+    await db.execute(`
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             channel TEXT NOT NULL,
@@ -42,15 +54,14 @@ async function initDB() {
             avatar TEXT NOT NULL,
             color TEXT NOT NULL,
             text TEXT NOT NULL,
-            timestamp TEXT NOT NULL
+            timestamp TEXT NOT NULL,
+            reply_id INTEGER DEFAULT NULL,
+            reply_text TEXT DEFAULT NULL
         )
     `);
 }
 initDB().catch(console.error);
 
-// --- アカウントサービスAPI (GAS連携) ---
-
-// 1. ログイン処理
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -61,7 +72,6 @@ app.post('/api/login', async (req, res) => {
         const result = await gasRes.json();
 
         if (result.success) {
-            // 認証成功時、Turso側にユーザー情報を同期保存（存在しなければ挿入）
             await db.execute({
                 sql: "INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
                 args: [result.userId, result.username]
@@ -73,7 +83,6 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// 2. 新規登録処理
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -84,7 +93,6 @@ app.post('/api/register', async (req, res) => {
         const result = await gasRes.json();
 
         if (result.success) {
-            // 登録成功時、Turso側にユーザー情報を同期保存
             await db.execute({
                 sql: "INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
                 args: [result.userId, result.username]
@@ -96,7 +104,6 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// 3. フレンド追加処理 (userId を使用 - お互いに登録されるように修正)
 app.post('/api/friends/add', async (req, res) => {
     const { userId, friendId } = req.body;
     if (!userId || !friendId) {
@@ -106,7 +113,6 @@ app.post('/api/friends/add', async (req, res) => {
         return res.json({ success: false, message: "自分自身をフレンドに追加することはできません。" });
     }
     try {
-        // 追加対象のフレンドがTursoのユーザーリストに存在するかチェック
         const userCheck = await db.execute({
             sql: "SELECT username FROM users WHERE user_id = ?",
             args: [friendId]
@@ -115,13 +121,11 @@ app.post('/api/friends/add', async (req, res) => {
             return res.json({ success: false, message: "該当する固有IDのユーザーがチャットシステムに見つかりません。" });
         }
 
-        // 自分から相手へのフレンド関係を保存
         await db.execute({
             sql: "INSERT OR IGNORE INTO friends (user_id, friend_id) VALUES (?, ?)",
             args: [userId, friendId]
         });
 
-        // 相手から自分へのフレンド関係も同時に保存（お互いにフレンド化）
         await db.execute({
             sql: "INSERT OR IGNORE INTO friends (user_id, friend_id) VALUES (?, ?)",
             args: [friendId, userId]
@@ -133,7 +137,6 @@ app.post('/api/friends/add', async (req, res) => {
     }
 });
 
-// 4. フレンド一覧取得処理
 app.get('/api/friends', async (req, res) => {
     const { userId } = req.query;
     try {
@@ -147,15 +150,69 @@ app.get('/api/friends', async (req, res) => {
     }
 });
 
+app.post('/api/groups/create', async (req, res) => {
+    const { groupName, userId } = req.body;
+    if (!groupName || !userId) {
+        return res.json({ success: false, message: "グループ名またはユーザーIDが不足しています。" });
+    }
+    const crypto = require('crypto');
+    const groupId = 'group_' + crypto.randomBytes(8).toString('hex');
+    try {
+        await db.execute({
+            sql: "INSERT INTO groups (group_id, group_name) VALUES (?, ?)",
+            args: [groupId, groupName]
+        });
+        await db.execute({
+            sql: "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)",
+            args: [groupId, userId]
+        });
+        res.json({ success: true, message: `グループ「${groupName}」を作成しました。` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
-// --- Socket.io リアルタイム通信ロジック ---
+app.post('/api/groups/invite', async (req, res) => {
+    const { groupId, friendId } = req.body;
+    if (!groupId || !friendId) {
+        return res.json({ success: false, message: "グループIDまたはフレンドIDが不足しています。" });
+    }
+    try {
+        await db.execute({
+            sql: "INSERT OR IGNORE INTO group_members (group_id, user_id) VALUES (?, ?)",
+            args: [groupId, friendId]
+        });
+        res.json({ success: true, message: "グループにフレンドを招待しました。" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/groups', async (req, res) => {
+    const { userId } = req.query;
+    try {
+        const result = await db.execute({
+            sql: "SELECT g.group_id, g.group_name FROM group_members gm JOIN groups g ON gm.group_id = g.group_id WHERE gm.user_id = ?",
+            args: [userId]
+        });
+        res.json({ success: true, groups: result.rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 io.on('connection', (socket) => {
     socket.on('join_channel', async (data) => {
-        const { myId, friendId } = data;
-        if (!myId || !friendId) return;
+        const { myId, friendId, isGroup, groupId } = data;
+        let roomId = '';
 
-        // 2人のユーザーIDを並び替えて共通のルームIDを決定
-        const roomId = [myId, friendId].sort().join('_');
+        if (isGroup) {
+            roomId = groupId;
+        } else {
+            if (!myId || !friendId) return;
+            roomId = [myId, friendId].sort().join('_');
+        }
+
         socket.join(roomId);
 
         try {
@@ -170,28 +227,42 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_message', async (msgData) => {
-        const { myId, friendId, name, avatar, color, text, timestamp } = msgData;
-        if (!myId || !friendId) return;
-
-        // 保存用・通信用に共通のルームIDを決定
-        const roomId = [myId, friendId].sort().join('_');
+        const { channel, name, avatar, color, text, timestamp, replyId, replyText } = msgData;
 
         try {
-            await db.execute({
-                sql: "INSERT INTO messages (channel, name, avatar, color, text, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-                args: [roomId, name, avatar, color, text, timestamp]
+            const res = await db.execute({
+                sql: "INSERT INTO messages (channel, name, avatar, color, text, timestamp, reply_id, reply_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                args: [channel, name, avatar, color, text, timestamp, replyId || null, replyText || null]
             });
 
-            io.to(roomId).emit('receive_message', {
-                channel: roomId,
+            const insertedId = Number(res.lastInsertRowid);
+
+            io.to(channel).emit('receive_message', {
+                id: insertedId,
+                channel: channel,
                 name: name,
                 avatar: avatar,
                 color: color,
                 text: text,
-                timestamp: timestamp
+                timestamp: timestamp,
+                reply_id: replyId || null,
+                reply_text: replyText || null
             });
         } catch (err) {
             console.error("データ保存失敗:", err);
+        }
+    });
+
+    socket.on('delete_message', async (data) => {
+        const { msgId, roomId } = data;
+        try {
+            await db.execute({
+                sql: "DELETE FROM messages WHERE id = ?",
+                args: [msgId]
+            });
+            io.to(roomId).emit('message_deleted', { msgId: msgId, roomId: roomId });
+        } catch (err) {
+            console.error("データ削除失敗:", err);
         }
     });
 });
