@@ -74,7 +74,7 @@
         }
 
         .friend-add-box {
-            display: flex;
+            display: none;
             gap: 4px;
             margin-bottom: 8px;
         }
@@ -485,13 +485,13 @@
         }
 
         .group-manage-box {
+            display: none;
             background-color: #ffffff;
             padding: 12px;
             border-radius: 12px;
             margin-bottom: 12px;
             border: 1px solid #e0e0e0;
             font-size: 0.8rem;
-            display: flex;
             flex-direction: column;
             gap: 6px;
         }
@@ -537,11 +537,173 @@
             font-size: 0.8rem;
             cursor: pointer;
         }
+
+        /* 規定のスタイルに干渉しないように追加するモーダル表示用CSS */
+        .btn-plus-trigger {
+            cursor: pointer;
+            color: var(--text-sub);
+            padding: 4px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        .btn-plus-trigger:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-main);
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        .modal-card {
+            background: #ffffff;
+            width: 90%;
+            max-width: 360px;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .modal-header-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .modal-options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .modal-opt-btn {
+            width: 100%;
+            padding: 12px;
+            text-align: left;
+            background: var(--bg-sidebar);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background-color 0.2s;
+        }
+        .modal-opt-btn:hover {
+            background: var(--bg-hover);
+        }
+        .modal-input-field {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .modal-input-field:focus {
+            border-color: var(--brand-color);
+        }
+        .modal-footer-btns {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-modal-action {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .btn-modal-action.cancel {
+            background: transparent;
+            color: var(--text-sub);
+        }
+        .btn-modal-action.primary {
+            background: var(--brand-color);
+            color: white;
+        }
+        .modal-member-checklist {
+            max-height: 140px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .modal-member-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .modal-member-item input {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <div id="toast" class="toast">アクションが実行されました</div>
+
+    <div class="modal-overlay" id="actionModal">
+        <div class="modal-card" id="step1Choice">
+            <div class="modal-header-title">新規作成</div>
+            <div class="modal-options-list">
+                <button class="modal-opt-btn" onclick="openFriendAddStep()">
+                    <i class="material-icons-outlined" style="color: var(--brand-color)">person_add</i>
+                    <span>フレンドを追加する</span>
+                </button>
+                <button class="modal-opt-btn" onclick="openGroupInviteStep()">
+                    <i class="material-icons-outlined" style="color: #1f8737">group_add</i>
+                    <span>グループを作成する</span>
+                </button>
+            </div>
+            <div class="modal-footer-btns">
+                <button class="btn-modal-action cancel" onclick="closeActionModal()">キャンセル</button>
+            </div>
+        </div>
+
+        <div class="modal-card" id="stepFriendAdd" style="display: none;">
+            <div class="modal-header-title">フレンド追加</div>
+            <input type="text" id="modalFriendIdInput" class="modal-input-field" placeholder="友達の固有IDを入力">
+            <div class="modal-footer-btns">
+                <button class="btn-modal-action cancel" onclick="backToStep1()">戻る</button>
+                <button class="btn-modal-action primary" onclick="submitModalFriendAdd()">追加</button>
+            </div>
+        </div>
+
+        <div class="modal-card" id="stepGroupInvite" style="display: none;">
+            <div class="modal-header-title">グループ作成 (1/2): メンバー招待</div>
+            <div style="font-size: 0.8rem; color: var(--text-sub);">招待する人を選択してください（複数可）</div>
+            <div class="modal-member-checklist" id="modalInviteChecklist"></div>
+            <div class="modal-footer-btns">
+                <button class="btn-modal-action cancel" onclick="backToStep1()">戻る</button>
+                <button class="btn-modal-action primary" onclick="goToGroupNameStep()">次へ</button>
+            </div>
+        </div>
+
+        <div class="modal-card" id="stepGroupName" style="display: none;">
+            <div class="modal-header-title">グループ作成 (2/2): グループ名設定</div>
+            <input type="text" id="modalGroupNameInput" class="modal-input-field" placeholder="グループ名を入力">
+            <div class="modal-footer-btns">
+                <button class="btn-modal-action cancel" onclick="backToGroupInviteStep()">戻る</button>
+                <button class="btn-modal-action primary" onclick="submitModalGroupCreate()">作成</button>
+            </div>
+        </div>
+    </div>
 
     <div class="sidebar">
         <div class="logo-area">
@@ -569,6 +731,7 @@
         <div class="menu-section">
             <div class="section-title">
                 <span>直近のチャット・フレンド</span>
+                <i class="material-icons-outlined btn-plus-trigger" onclick="openActionModal()">add</i>
             </div>
             <ul class="chat-list" id="chatList">
             </ul>
@@ -646,6 +809,8 @@
         let isGroupMode = false;
         let selectedReplyId = null;
         let selectedReplyText = '';
+        
+        let globalFriendsCache = [];
 
         function showToast(message) {
             toast.textContent = message;
@@ -658,11 +823,103 @@
             showToast("固有IDをクリップボードにコピーしました");
         }
 
+        // モーダル表示制御ロジック
+        function openActionModal() {
+            document.getElementById('actionModal').style.display = 'flex';
+            backToStep1();
+        }
+        function closeActionModal() {
+            document.getElementById('actionModal').style.display = 'none';
+        }
+        function backToStep1() {
+            document.getElementById('step1Choice').style.display = 'flex';
+            document.getElementById('stepFriendAdd').style.display = 'none';
+            document.getElementById('stepGroupInvite').style.display = 'none';
+            document.getElementById('stepGroupName').style.display = 'none';
+        }
+        function openFriendAddStep() {
+            document.getElementById('step1Choice').style.display = 'none';
+            document.getElementById('stepFriendAdd').style.display = 'flex';
+            document.getElementById('modalFriendIdInput').value = '';
+            document.getElementById('modalFriendIdInput').focus();
+        }
+        function openGroupInviteStep() {
+            document.getElementById('step1Choice').style.display = 'none';
+            document.getElementById('stepGroupInvite').style.display = 'flex';
+            
+            const checklist = document.getElementById('modalInviteChecklist');
+            checklist.innerHTML = '';
+            if (globalFriendsCache.length === 0) {
+                checklist.innerHTML = '<div style="font-size:0.8rem; padding:8px; color:var(--text-sub);">選択できるフレンドがいません</div>';
+            } else {
+                globalFriendsCache.forEach(f => {
+                    const label = document.createElement('label');
+                    label.classList.add('modal-member-item');
+                    label.innerHTML = `
+                        <input type="checkbox" name="modalGroupInviteUser" value="${f.user_id}">
+                        <span>${escapeHTML(f.username)}</span>
+                    `;
+                    checklist.appendChild(label);
+                });
+            }
+        }
+        function goToGroupNameStep() {
+            document.getElementById('stepGroupInvite').style.display = 'none';
+            document.getElementById('stepGroupName').style.display = 'flex';
+            document.getElementById('modalGroupNameInput').value = '';
+            document.getElementById('modalGroupNameInput').focus();
+        }
+        function backToGroupInviteStep() {
+            document.getElementById('stepGroupName').style.display = 'none';
+            document.getElementById('stepGroupInvite').style.display = 'flex';
+        }
+        async function submitModalFriendAdd() {
+            const val = document.getElementById('modalFriendIdInput').value.trim();
+            if(!val) return;
+            document.getElementById('friendIdInput').value = val;
+            await addFriend();
+            closeActionModal();
+        }
+        async function submitModalGroupCreate() {
+            const gName = document.getElementById('modalGroupNameInput').value.trim();
+            if(!gName) {
+                showToast("グループ名を入力してください");
+                return;
+            }
+            
+            const checkboxes = document.getElementsByName('modalGroupInviteUser');
+            const inviteUserIds = [];
+            checkboxes.forEach(cb => {
+                if(cb.checked) inviteUserIds.push(cb.value);
+            });
+            
+            try {
+                const res = await fetch('/api/groups/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        groupName: gName, 
+                        userId: currentUser.userId,
+                        inviteUserIds: inviteUserIds
+                    })
+                });
+                const data = await res.json();
+                showToast(data.message);
+                if (data.success) {
+                    closeActionModal();
+                    loadFriends();
+                }
+            } catch (err) {
+                showToast("通信エラーが発生しました");
+            }
+        }
+
         async function loadFriends() {
             try {
                 const res = await fetch(`/api/friends?userId=${currentUser.userId}`);
                 const data = await res.json();
                 if (data.success) {
+                    globalFriendsCache = data.friends;
                     inviteFriendSelect.innerHTML = '';
                     data.friends.forEach(f => {
                         const opt = document.createElement('option');
