@@ -60,7 +60,6 @@ async function initDB() {
         )
     `);
 }
-initDB().catch(console.error);
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
@@ -248,7 +247,7 @@ io.on('connection', (socket) => {
                 ]
             });
 
-            const insertedId = Number(res.lastInsertRowid);
+            const insertedId = res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : null;
 
             io.to(channel).emit('receive_message', {
                 id: insertedId,
@@ -281,6 +280,16 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+
+async function startServer() {
+    try {
+        await initDB();
+        server.listen(PORT, () => {
+            console.log(`Server is running on http://localhost:${PORT}`);
+        });
+    } catch (err) {
+        console.error("データベース初期化エラーによりサーバーを起動できませんでした:", err);
+    }
+}
+
+startServer();
