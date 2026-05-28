@@ -229,10 +229,23 @@ io.on('connection', (socket) => {
     socket.on('send_message', async (msgData) => {
         const { channel, name, avatar, color, text, timestamp, replyId, replyText } = msgData;
 
+        // Turso(libsql)にundefinedが渡るのを防ぐため、明示的にnullまたは適切な型にフォールバックします
+        const safeReplyId = (replyId !== undefined && replyId !== null) ? replyId : null;
+        const safeReplyText = (replyText !== undefined && replyText !== null) ? replyText : null;
+
         try {
             const res = await db.execute({
                 sql: "INSERT INTO messages (channel, name, avatar, color, text, timestamp, reply_id, reply_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                args: [channel, name, avatar, color, text, timestamp, replyId || null, replyText || null]
+                args: [
+                    channel || '', 
+                    name || '', 
+                    avatar || '', 
+                    color || '', 
+                    text || '', 
+                    timestamp || '', 
+                    safeReplyId, 
+                    safeReplyText
+                ]
             });
 
             const insertedId = Number(res.lastInsertRowid);
@@ -245,8 +258,8 @@ io.on('connection', (socket) => {
                 color: color,
                 text: text,
                 timestamp: timestamp,
-                reply_id: replyId || null,
-                reply_text: replyText || null
+                reply_id: safeReplyId,
+                reply_text: safeReplyText
             });
         } catch (err) {
             console.error("データ保存失敗:", err);
